@@ -19,7 +19,7 @@ fun ProductoFormScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    
+
     if (uiState.guardadoExitosamente) {
         viewModel.resetEstadoGuardado()
         onNavigateBack()
