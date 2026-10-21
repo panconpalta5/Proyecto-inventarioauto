@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 class ProductoRepository(private val productoDao: ProductoDao) {
 
-    // Flujo reactivo para la lista de productos
+
     val productosStream: Flow<List<ProductoEntity>> = productoDao.obtenerProductos()
 
     suspend fun getProducto(id: Int): ProductoEntity? {
