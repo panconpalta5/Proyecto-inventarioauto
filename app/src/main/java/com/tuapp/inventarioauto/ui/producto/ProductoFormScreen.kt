@@ -1,43 +1,104 @@
 package com.tuapp.inventarioauto.ui.producto
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import java.io.File
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductoFormScreen(
     viewModel: ProductoViewModel,
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    val categorias = listOf("Motor", "Frenos", "Transmisión", "Eléctrico", "Líquidos", "Accesorios", "Repuestos")
+    var expandido by remember { mutableStateOf(false) }
+
+    var imagenBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
 
-    if (uiState.guardadoExitosamente) {
-        viewModel.resetEstadoGuardado()
-        onNavigateBack()
+    LaunchedEffect(uiState.imagenUri) {
+        if (uiState.imagenUri.isNotBlank() && imagenBitmap == null) {
+            try {
+                val file = File(uiState.imagenUri)
+                if (file.exists()) {
+                    imagenBitmap = BitmapFactory.decodeFile(file.absolutePath)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            imagenBitmap = bitmap
+            try {
+                val filename = "producto_${System.currentTimeMillis()}.png"
+                val file = File(context.filesDir, filename)
+                file.outputStream().use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                viewModel.actualizarEstado(uiState.copy(imagenUri = file.absolutePath))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasCameraPermission = isGranted
+        if (isGranted) {
+            try { cameraLauncher.launch(null) } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    LaunchedEffect(uiState.guardadoExitosamente) {
+        if (uiState.guardadoExitosamente) {
+            viewModel.resetEstadoGuardado()
+            onNavigateBack()
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(text = "Registrar Producto", style = MaterialTheme.typography.headlineMedium)
+        Text("Registrar Producto", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = uiState.codigo,
-            onValueChange = { viewModel.actualizarEstado(uiState.copy(codigo = it)) },
-            label = { Text("Código") },
+            onValueChange = { viewModel.actualizarEstado(uiState.copy(codigo = it, codigoError = null)) },
+            label = { Text("Código del producto") },
             isError = uiState.codigoError != null,
             supportingText = { uiState.codigoError?.let { Text(it) } },
             modifier = Modifier.fillMaxWidth()
@@ -45,26 +106,48 @@ fun ProductoFormScreen(
 
         OutlinedTextField(
             value = uiState.nombre,
-            onValueChange = { viewModel.actualizarEstado(uiState.copy(nombre = it)) },
-            label = { Text("Nombre") },
+            onValueChange = { viewModel.actualizarEstado(uiState.copy(nombre = it, nombreError = null)) },
+            label = { Text("Nombre del producto") },
             isError = uiState.nombreError != null,
             supportingText = { uiState.nombreError?.let { Text(it) } },
             modifier = Modifier.fillMaxWidth()
         )
 
-        OutlinedTextField(
-            value = uiState.categoria,
-            onValueChange = { viewModel.actualizarEstado(uiState.copy(categoria = it)) },
-            label = { Text("Categoría") },
-            isError = uiState.categoriaError != null,
-            supportingText = { uiState.categoriaError?.let { Text(it) } },
+        ExposedDropdownMenuBox(
+            expanded = expandido,
+            onExpandedChange = { expandido = !expandido },
             modifier = Modifier.fillMaxWidth()
-        )
+        ) {
+            OutlinedTextField(
+                value = uiState.categoria,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Categoría") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
+                isError = uiState.categoriaError != null,
+                supportingText = { uiState.categoriaError?.let { Text(it) } },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expandido,
+                onDismissRequest = { expandido = false }
+            ) {
+                categorias.forEach { seleccion ->
+                    DropdownMenuItem(
+                        text = { Text(seleccion) },
+                        onClick = {
+                            viewModel.actualizarEstado(uiState.copy(categoria = seleccion, categoriaError = null))
+                            expandido = false
+                        }
+                    )
+                }
+            }
+        }
 
         OutlinedTextField(
             value = uiState.cantidad,
-            onValueChange = { viewModel.actualizarEstado(uiState.copy(cantidad = it)) },
-            label = { Text("Cantidad") },
+            onValueChange = { viewModel.actualizarEstado(uiState.copy(cantidad = it, cantidadError = null)) },
+            label = { Text("Cantidad actual") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = uiState.cantidadError != null,
             supportingText = { uiState.cantidadError?.let { Text(it) } },
@@ -73,13 +156,41 @@ fun ProductoFormScreen(
 
         OutlinedTextField(
             value = uiState.stockMinimo,
-            onValueChange = { viewModel.actualizarEstado(uiState.copy(stockMinimo = it)) },
-            label = { Text("Stock Mínimo") },
+            onValueChange = { viewModel.actualizarEstado(uiState.copy(stockMinimo = it, stockMinimoError = null)) },
+            label = { Text("Stock mínimo") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = uiState.stockMinimoError != null,
             supportingText = { uiState.stockMinimoError?.let { Text(it) } },
             modifier = Modifier.fillMaxWidth()
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+
+        imagenBitmap?.let { bmp ->
+            Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = "Foto capturada",
+                modifier = Modifier
+                    .size(120.dp)
+                    .padding(bottom = 8.dp)
+            )
+        }
+
+        OutlinedButton(
+            onClick = {
+                if (hasCameraPermission) {
+                    try { cameraLauncher.launch(null) } catch (e: Exception) { e.printStackTrace() }
+                } else {
+                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Capturar Fotografía")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = { viewModel.guardarProducto() },

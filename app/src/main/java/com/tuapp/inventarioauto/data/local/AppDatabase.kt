@@ -5,9 +5,15 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ProductoEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [ProductoEntity::class, MovimientoEntity::class, ProveedorEntity::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
+
     abstract fun productoDao(): ProductoDao
+    abstract fun movimientoDao(): MovimientoDao
 
     companion object {
         @Volatile
@@ -19,7 +25,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "inventario_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

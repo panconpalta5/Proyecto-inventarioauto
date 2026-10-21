@@ -2,67 +2,151 @@ package com.tuapp.inventarioauto.ui.producto
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuapp.inventarioauto.data.local.MovimientoEntity
 import com.tuapp.inventarioauto.data.local.ProductoEntity
 import com.tuapp.inventarioauto.repository.ProductoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ProductoViewModel(private val repository: ProductoRepository) : ViewModel() {
-
     private val _uiState = MutableStateFlow(ProductoUiState())
     val uiState: StateFlow<ProductoUiState> = _uiState.asStateFlow()
 
+    private val _productoSeleccionado = MutableStateFlow<ProductoEntity?>(null)
+    val productoSeleccionado: StateFlow<ProductoEntity?> = _productoSeleccionado.asStateFlow()
+
+    private val _movimientos = MutableStateFlow<List<MovimientoEntity>>(emptyList())
+    val movimientos: StateFlow<List<MovimientoEntity>> = _movimientos.asStateFlow()
+
     fun actualizarEstado(nuevoEstado: ProductoUiState) {
-        _uiState.update { nuevoEstado }
+        _uiState.value = nuevoEstado
+    }
+
+    fun resetEstadoGuardado() {
+        _uiState.value = _uiState.value.copy(guardadoExitosamente = false)
     }
 
     fun guardarProducto() {
-        val estadoActual = _uiState.value
+        val estado = _uiState.value
 
+        val cantidadInt = estado.cantidad.toIntOrNull()
+        val stockMinimoInt = estado.stockMinimo.toIntOrNull()
 
-        val codigoValido = estadoActual.codigo.isNotBlank()
-        val nombreValido = estadoActual.nombre.isNotBlank()
-        val categoriaValida = estadoActual.categoria.isNotBlank()
+        val codigoErr = if (estado.codigo.isBlank()) "Campo obligatorio" else null
+        val nombreErr = if (estado.nombre.isBlank()) "Campo obligatorio" else null
+        val categoriaErr = if (estado.categoria.isBlank()) "Campo obligatorio" else null
+        val cantidadErr = if (cantidadInt == null || cantidadInt < 0) "Debe ser un número >= 0" else null
+        val stockErr = if (stockMinimoInt == null || stockMinimoInt < 0) "Debe ser un número >= 0" else null
 
-        val cantidadNum = estadoActual.cantidad.toIntOrNull()
-        val cantidadValida = cantidadNum != null && cantidadNum >= 0
-
-        val stockMinimoNum = estadoActual.stockMinimo.toIntOrNull()
-        val stockMinimoValido = stockMinimoNum != null && stockMinimoNum >= 0
-
-
-        _uiState.update {
-            it.copy(
-                codigoError = if (codigoValido) null else "Campo obligatorio",
-                nombreError = if (nombreValido) null else "Campo obligatorio",
-                categoriaError = if (categoriaValida) null else "Campo obligatorio",
-                cantidadError = if (cantidadValida) null else "Debe ser número >= 0",
-                stockMinimoError = if (stockMinimoValido) null else "Debe ser número >= 0"
+        if (codigoErr != null || nombreErr != null || categoriaErr != null || cantidadErr != null || stockErr != null) {
+            _uiState.value = estado.copy(
+                codigoError = codigoErr,
+                nombreError = nombreErr,
+                categoriaError = categoriaErr,
+                cantidadError = cantidadErr,
+                stockMinimoError = stockErr
             )
+            return
         }
 
+        _uiState.value = estado.copy(guardando = true)
 
-        if (codigoValido && nombreValido && categoriaValida && cantidadValida && stockMinimoValido) {
-            _uiState.update { it.copy(guardando = true) }
+        viewModelScope.launch {
+            val producto = ProductoEntity(
+                id = estado.id,
+                codigo = estado.codigo,
+                nombre = estado.nombre,
+                categoria = estado.categoria,
+                cantidad = cantidadInt ?: 0,
+                stockMinimo = stockMinimoInt ?: 0,
+                imagenUri = estado.imagenUri,
+                descripcionBreve = estado.descripcionBreve,
+                marca = estado.marca,
+                unidadMedida = estado.unidadMedida,
+                precioCompra = estado.precioCompra.toDoubleOrNull() ?: 0.0,
+                precioVenta = estado.precioVenta.toDoubleOrNull() ?: 0.0,
+                proveedorPrincipal = estado.proveedorPrincipal,
+                ubicacion = estado.ubicacion
+            )
 
-            viewModelScope.launch {
-                val nuevoProducto = ProductoEntity(
-                    codigo = estadoActual.codigo,
-                    nombre = estadoActual.nombre,
-                    categoria = estadoActual.categoria,
-                    cantidad = cantidadNum!!,
-                    stockMinimo = stockMinimoNum!!
-                )
-                repository.insertProducto(nuevoProducto)
-                _uiState.update { it.copy(guardando = false, guardadoExitosamente = true) }
+            if (estado.id == 0) {
+                repository.insertProducto(producto)
+            } else {
+                repository.updateProducto(producto)
+            }
+
+            _uiState.value = ProductoUiState(guardadoExitosamente = true)
+        }
+    }
+
+    fun seleccionarProducto(producto: ProductoEntity) {
+        _productoSeleccionado.value = producto
+        _uiState.value = ProductoUiState(
+            id = producto.id,
+            codigo = producto.codigo,
+            nombre = producto.nombre,
+            categoria = producto.categoria,
+            cantidad = producto.cantidad.toString(),
+            stockMinimo = producto.stockMinimo.toString(),
+            imagenUri = producto.imagenUri,
+            descripcionBreve = producto.descripcionBreve,
+            marca = producto.marca,
+            unidadMedida = producto.unidadMedida,
+            precioCompra = producto.precioCompra.toString(),
+            precioVenta = producto.precioVenta.toString(),
+            proveedorPrincipal = producto.proveedorPrincipal,
+            ubicacion = producto.ubicacion
+        )
+
+        viewModelScope.launch {
+            repository.getMovimientosPorProducto(producto.id).collect { lista ->
+                _movimientos.value = lista
             }
         }
     }
 
-    fun resetEstadoGuardado() {
-        _uiState.update { ProductoUiState() }
+    fun prepararNuevoProducto() {
+        _productoSeleccionado.value = null
+        _movimientos.value = emptyList()
+        _uiState.value = ProductoUiState()
+    }
+
+    fun registrarMovimiento(producto: ProductoEntity, tipo: String, cantidadMov: Int, motivo: String) {
+        viewModelScope.launch {
+
+            val cantidadLimpia = kotlin.math.abs(cantidadMov)
+
+
+            val esIngreso = tipo.trim().equals("Ingreso", ignoreCase = true)
+
+            val nuevaCantidad = if (esIngreso) {
+                producto.cantidad + cantidadLimpia
+            } else {
+                producto.cantidad - cantidadLimpia
+            }
+
+
+            val productoActualizado = producto.copy(cantidad = nuevaCantidad)
+            repository.updateProducto(productoActualizado)
+
+
+            val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+            val movimiento = MovimientoEntity(
+                productoId = producto.id,
+                tipo = tipo.trim(),
+                cantidad = cantidadLimpia,
+                fecha = fechaActual,
+                motivo = motivo
+            )
+            repository.insertMovimiento(movimiento)
+
+
+            _productoSeleccionado.value = productoActualizado
+        }
     }
 }
