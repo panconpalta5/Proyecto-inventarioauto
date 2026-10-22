@@ -61,18 +61,15 @@ fun ScannerScreen(navController: NavController, viewModel: ProductoViewModel) {
                                 it.setSurfaceProvider(previewView.surfaceProvider)
                             }
 
-
                             val imageAnalysis = ImageAnalysis.Builder()
                                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                 .build()
-
 
                             val scanner = BarcodeScanning.getClient(
                                 BarcodeScannerOptions.Builder()
                                     .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                                     .build()
                             )
-
 
                             imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                                 val mediaImage = imageProxy.image
@@ -84,12 +81,8 @@ fun ScannerScreen(navController: NavController, viewModel: ProductoViewModel) {
                                                 barcode.rawValue?.let { valorQr ->
                                                     if (isScanning) {
                                                         isScanning = false
-
-
                                                         val uiState = viewModel.uiState.value
                                                         viewModel.actualizarEstado(uiState.copy(codigo = valorQr, codigoError = null))
-
-
                                                         navController.navigate("formulario_producto") {
                                                             popUpTo("scanner") { inclusive = true }
                                                         }
@@ -98,7 +91,7 @@ fun ScannerScreen(navController: NavController, viewModel: ProductoViewModel) {
                                             }
                                         }
                                         .addOnCompleteListener {
-                                            imageProxy.close() // Siempre cerrar el frame
+                                            imageProxy.close()
                                         }
                                 } else {
                                     imageProxy.close()
@@ -109,7 +102,6 @@ fun ScannerScreen(navController: NavController, viewModel: ProductoViewModel) {
 
                             try {
                                 cameraProvider.unbindAll()
-                                // Vinculamos la vista previa y el analizador a la cámara
                                 cameraProvider.bindToLifecycle(
                                     lifecycleOwner,
                                     cameraSelector,

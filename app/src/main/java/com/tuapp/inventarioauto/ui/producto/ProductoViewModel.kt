@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuapp.inventarioauto.data.local.MovimientoEntity
 import com.tuapp.inventarioauto.data.local.ProductoEntity
+import com.tuapp.inventarioauto.data.local.ProveedorEntity
+import com.tuapp.inventarioauto.data.local.UsuarioEntity
 import com.tuapp.inventarioauto.repository.ProductoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,11 @@ class ProductoViewModel(private val repository: ProductoRepository) : ViewModel(
     private val _movimientos = MutableStateFlow<List<MovimientoEntity>>(emptyList())
     val movimientos: StateFlow<List<MovimientoEntity>> = _movimientos.asStateFlow()
 
+    private val _usuarioActual = MutableStateFlow<UsuarioEntity?>(null)
+    val usuarioActual: StateFlow<UsuarioEntity?> = _usuarioActual.asStateFlow()
+
+    val proveedoresStream = repository.proveedoresStream
+
     fun actualizarEstado(nuevoEstado: ProductoUiState) {
         _uiState.value = nuevoEstado
     }
@@ -31,9 +38,32 @@ class ProductoViewModel(private val repository: ProductoRepository) : ViewModel(
         _uiState.value = _uiState.value.copy(guardadoExitosamente = false)
     }
 
+    fun login(usuario: String, contrasena: String, onSuccess: () -> Unit, onError: () -> Unit) {
+        viewModelScope.launch {
+            val user = repository.login(usuario, contrasena)
+            if (user != null) {
+                _usuarioActual.value = user
+                onSuccess()
+            } else {
+                onError()
+            }
+        }
+    }
+
+    fun registrarOperador(usuario: String, contrasena: String) {
+        viewModelScope.launch {
+            repository.registrarUsuario(UsuarioEntity(usuario = usuario, contrasena = contrasena, rol = "operador"))
+        }
+    }
+
+    fun guardarProveedor(codigo: String, nombre: String, correo: String, telefono: String, categorias: String) {
+        viewModelScope.launch {
+            repository.insertarProveedor(ProveedorEntity(codigo = codigo, nombreComercial = nombre, correo = correo, telefono = telefono, categoriasSuministradas = categorias))
+        }
+    }
+
     fun guardarProducto() {
         val estado = _uiState.value
-
         val cantidadInt = estado.cantidad.toIntOrNull()
         val stockMinimoInt = estado.stockMinimo.toIntOrNull()
 
@@ -116,12 +146,19 @@ class ProductoViewModel(private val repository: ProductoRepository) : ViewModel(
         _uiState.value = ProductoUiState()
     }
 
+    fun eliminarProductoSeleccionado(onSuccess: () -> Unit) {
+        val producto = _productoSeleccionado.value
+        if (producto != null && _usuarioActual.value?.rol == "admin") {
+            viewModelScope.launch {
+                repository.eliminarProducto(producto)
+                onSuccess()
+            }
+        }
+    }
+
     fun registrarMovimiento(producto: ProductoEntity, tipo: String, cantidadMov: Int, motivo: String) {
         viewModelScope.launch {
-
             val cantidadLimpia = kotlin.math.abs(cantidadMov)
-
-
             val esIngreso = tipo.trim().equals("Ingreso", ignoreCase = true)
 
             val nuevaCantidad = if (esIngreso) {
@@ -130,10 +167,8 @@ class ProductoViewModel(private val repository: ProductoRepository) : ViewModel(
                 producto.cantidad - cantidadLimpia
             }
 
-
             val productoActualizado = producto.copy(cantidad = nuevaCantidad)
             repository.updateProducto(productoActualizado)
-
 
             val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
             val movimiento = MovimientoEntity(
@@ -144,7 +179,6 @@ class ProductoViewModel(private val repository: ProductoRepository) : ViewModel(
                 motivo = motivo
             )
             repository.insertMovimiento(movimiento)
-
 
             _productoSeleccionado.value = productoActualizado
         }

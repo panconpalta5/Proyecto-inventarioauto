@@ -6,7 +6,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.tuapp.inventarioauto.repository.ProductoRepository
 import com.tuapp.inventarioauto.ui.login.LoginScreen
+import com.tuapp.inventarioauto.ui.menu.CrearUsuarioScreen
 import com.tuapp.inventarioauto.ui.menu.MenuScreen
+import com.tuapp.inventarioauto.ui.menu.ProveedorFormScreen
+import com.tuapp.inventarioauto.ui.menu.ProveedoresScreen
 import com.tuapp.inventarioauto.ui.producto.ListaProductosScreen
 import com.tuapp.inventarioauto.ui.producto.ProductoDetalleScreen
 import com.tuapp.inventarioauto.ui.producto.ProductoFormScreen
@@ -21,13 +24,12 @@ fun AppNavigation(
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "login") {
-
         composable("login") {
-            LoginScreen(navController = navController)
+            LoginScreen(navController = navController, viewModel = viewModel)
         }
 
         composable("menu_principal") {
-            MenuScreen(navController = navController)
+            MenuScreen(navController = navController, viewModel = viewModel)
         }
 
         composable("lista_productos") {
@@ -68,6 +70,28 @@ fun AppNavigation(
 
         composable("scanner") {
             ScannerScreen(navController = navController, viewModel = viewModel)
+        }
+
+        composable("crear_usuario") {
+            CrearUsuarioScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("lista_proveedores") {
+            ProveedoresScreen(
+                viewModel = viewModel,
+                onNavigateToForm = { navController.navigate("formulario_proveedor") },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("formulario_proveedor") {
+            ProveedorFormScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

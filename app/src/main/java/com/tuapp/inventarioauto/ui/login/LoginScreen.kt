@@ -8,9 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.tuapp.inventarioauto.ui.producto.ProductoViewModel
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(navController: NavController, viewModel: ProductoViewModel) {
     var usuario by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
@@ -40,22 +41,21 @@ fun LoginScreen(navController: NavController) {
         )
 
         if (error) {
-            Text("Credenciales incorrectas (Usa admin / admin)", color = MaterialTheme.colorScheme.error)
+            Text("Credenciales incorrectas", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
             onClick = {
-
-                if (usuario == "admin" && contrasena == "admin") {
-                    navController.navigate("menu_principal") {
-
-                        popUpTo("login") { inclusive = true }
-                    }
-                } else {
-                    error = true
-                }
+                viewModel.login(usuario, contrasena,
+                    onSuccess = {
+                        navController.navigate("menu_principal") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    },
+                    onError = { error = true }
+                )
             },
             modifier = Modifier.fillMaxWidth()
         ) {

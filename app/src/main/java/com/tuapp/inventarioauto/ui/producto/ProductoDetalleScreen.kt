@@ -26,13 +26,12 @@ fun ProductoDetalleScreen(
 ) {
     val producto by viewModel.productoSeleccionado.collectAsState()
     val movimientos by viewModel.movimientos.collectAsState()
-    var mostrarDialogoMovimiento by remember { mutableStateOf(false) }
+    val usuarioActivo by viewModel.usuarioActual.collectAsState()
 
+    var mostrarDialogoMovimiento by remember { mutableStateOf(false) }
     var tipoMovimiento by remember { mutableStateOf("Ingreso") }
     var cantidadMovimiento by remember { mutableStateOf("") }
     var motivoMovimiento by remember { mutableStateOf("") }
-
-    // 1. Zona segura para cargar la imagen (Fuera de la interfaz visual)
     var imagenBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(producto?.imagenUri) {
@@ -75,7 +74,6 @@ fun ProductoDetalleScreen(
                 Text("Categoría: ${prod.categoria}", style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 2. Mostrar la imagen limpiamente si se cargó con éxito
                 imagenBitmap?.let { bmp ->
                     Image(
                         bitmap = bmp.asImageBitmap(),
@@ -106,7 +104,7 @@ fun ProductoDetalleScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Historial de Movimientos", style = MaterialTheme.typography.titleMedium)
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 if (movimientos.isEmpty()) {
                     Text("No hay movimientos recientes registrados.", style = MaterialTheme.typography.bodyMedium)
@@ -136,7 +134,22 @@ fun ProductoDetalleScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                if (usuarioActivo?.rol == "admin") {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            viewModel.eliminarProductoSeleccionado {
+                                onNavigateBack()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Eliminar Producto")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = onNavigateBack, modifier = Modifier.fillMaxWidth()) {
                     Text("Volver")
                 }

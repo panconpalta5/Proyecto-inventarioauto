@@ -8,7 +8,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -32,7 +34,6 @@ fun ProductoFormScreen(
     var expandido by remember { mutableStateOf(false) }
 
     var imagenBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
 
     LaunchedEffect(uiState.imagenUri) {
         if (uiState.imagenUri.isNotBlank() && imagenBitmap == null) {
@@ -91,6 +92,7 @@ fun ProductoFormScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text("Registrar Producto", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
@@ -164,8 +166,14 @@ fun ProductoFormScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = uiState.ubicacion,
+            onValueChange = { viewModel.actualizarEstado(uiState.copy(ubicacion = it)) },
+            label = { Text("Ubicación en bodega (Ej. Estante 2)") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
+        Spacer(modifier = Modifier.height(16.dp))
 
         imagenBitmap?.let { bmp ->
             Image(
