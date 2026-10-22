@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -102,7 +103,11 @@ fun ProductoFormScreen(
             onValueChange = { viewModel.actualizarEstado(uiState.copy(codigo = it, codigoError = null)) },
             label = { Text("Código del producto") },
             isError = uiState.codigoError != null,
-            supportingText = { uiState.codigoError?.let { Text(it) } },
+            supportingText = {
+                AnimatedVisibility(visible = uiState.codigoError != null) {
+                    Text(uiState.codigoError ?: "")
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -111,7 +116,11 @@ fun ProductoFormScreen(
             onValueChange = { viewModel.actualizarEstado(uiState.copy(nombre = it, nombreError = null)) },
             label = { Text("Nombre del producto") },
             isError = uiState.nombreError != null,
-            supportingText = { uiState.nombreError?.let { Text(it) } },
+            supportingText = {
+                AnimatedVisibility(visible = uiState.nombreError != null) {
+                    Text(uiState.nombreError ?: "")
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -127,7 +136,11 @@ fun ProductoFormScreen(
                 label = { Text("Categoría") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
                 isError = uiState.categoriaError != null,
-                supportingText = { uiState.categoriaError?.let { Text(it) } },
+                supportingText = {
+                    AnimatedVisibility(visible = uiState.categoriaError != null) {
+                        Text(uiState.categoriaError ?: "")
+                    }
+                },
                 modifier = Modifier.menuAnchor().fillMaxWidth()
             )
             ExposedDropdownMenu(
@@ -152,7 +165,11 @@ fun ProductoFormScreen(
             label = { Text("Cantidad actual") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = uiState.cantidadError != null,
-            supportingText = { uiState.cantidadError?.let { Text(it) } },
+            supportingText = {
+                AnimatedVisibility(visible = uiState.cantidadError != null) {
+                    Text(uiState.cantidadError ?: "")
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -162,7 +179,11 @@ fun ProductoFormScreen(
             label = { Text("Stock mínimo") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = uiState.stockMinimoError != null,
-            supportingText = { uiState.stockMinimoError?.let { Text(it) } },
+            supportingText = {
+                AnimatedVisibility(visible = uiState.stockMinimoError != null) {
+                    Text(uiState.stockMinimoError ?: "")
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 

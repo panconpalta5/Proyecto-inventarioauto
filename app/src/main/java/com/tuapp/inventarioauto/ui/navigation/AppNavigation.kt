@@ -15,6 +15,10 @@ import com.tuapp.inventarioauto.ui.producto.ProductoDetalleScreen
 import com.tuapp.inventarioauto.ui.producto.ProductoFormScreen
 import com.tuapp.inventarioauto.ui.producto.ScannerScreen
 import com.tuapp.inventarioauto.ui.producto.ProductoViewModel
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 
 @Composable
 fun AppNavigation(
@@ -23,7 +27,14 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "login") {
+    NavHost(
+        navController = navController,
+        startDestination = "login",
+        enterTransition = { slideInHorizontally(initialOffsetX = { 1000 }) + fadeIn() },
+        exitTransition = { slideOutHorizontally(targetOffsetX = { -1000 }) + fadeOut() },
+        popEnterTransition = { slideInHorizontally(initialOffsetX = { -1000 }) + fadeIn() },
+        popExitTransition = { slideOutHorizontally(targetOffsetX = { 1000 }) + fadeOut() }
+    ) {
         composable("login") {
             LoginScreen(navController = navController, viewModel = viewModel)
         }
