@@ -1,6 +1,7 @@
 package com.tuapp.inventarioauto.data.local
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -9,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProductoDao {
-
     @Query("SELECT * FROM productos ORDER BY nombre ASC")
     fun obtenerProductos(): Flow<List<ProductoEntity>>
 
@@ -21,4 +21,7 @@ interface ProductoDao {
 
     @Update
     suspend fun actualizarProducto(producto: ProductoEntity)
+
+    @Delete
+    suspend fun eliminarProducto(producto: ProductoEntity)
 }

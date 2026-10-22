@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.room.Room
 import com.tuapp.inventarioauto.data.local.AppDatabase
 import com.tuapp.inventarioauto.repository.ProductoRepository
 import com.tuapp.inventarioauto.ui.navigation.AppNavigation
@@ -18,15 +17,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java, "inventario_database"
+        val db = AppDatabase.getDatabase(applicationContext)
+
+        val repository = ProductoRepository(
+            db.productoDao(),
+            db.movimientoDao(),
+            db.proveedorDao(),
+            db.usuarioDao()
         )
-            .fallbackToDestructiveMigration()
-            .build()
-
-
-        val repository = ProductoRepository(db.productoDao(), db.movimientoDao())
         val viewModel = ProductoViewModel(repository)
 
         setContent {
